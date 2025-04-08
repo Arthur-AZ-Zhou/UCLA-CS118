@@ -17,23 +17,87 @@ int main(int argc, char** argv) {
 
     // Only supports localhost as a hostname, but that's all we'll test on
     const char* addr = (strcmp(argv[1], "localhost") == 0) ? "127.0.0.1" : argv[1];
-    int port = std::atoi(argv[2]);
+    int port = atoi(argv[2]);
 
     // TODO: Create socket
+    int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+                     // use IPv4  use UDP
+    
+    if (sockfd < 0) {
+        cerr << "Socket must be 1 or greater: " << strerror(errno) << endl; 
+        return 1;
+    }
 
-    // TODO: Set stdin and socket nonblocking
+    //SOCKET NONBLOCKING
+    int flags = fcntl(sockfd, F_GETFL);
+    flags |= O_NONBLOCK;
+    fcntl(sockfd, F_SETFL, flags);
+
+    //STDIN NONBLOCKING
+    flags = fcntl(STDIN_FILENO, F_GETFL, 0);
+    flags |= O_NONBLOCK;
+    fcntl(STDIN_FILENO, F_SETFL, flags);
 
     // TODO: Construct server address
+    struct sockaddr_in serveraddr;
+    memset(&serveraddr, 0, sizeof(serveraddr));
+    serveraddr.sin_family = AF_INET; // use IPv4
+    serveraddr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
-    char buffer[1024];
+    // Set receiving port
+    int PORT = 8080;
+    serveraddr.sin_port = htons(PORT); // Big endian
+    cout << "Server address configured for port " << port << endl;
+
+    int BUF_SIZE = 1024;
+    char server_buf[BUF_SIZE];
+    bool server_connected = false;
+    socklen_t serversize = sizeof(serveraddr);
+
+    cout << "Connected to server at " << addr << ":" << port << endl;
 
     // Listen loop
     while (true) {
-        // TODO: Receive from socket
-        // TODO: If data, write to stdout
-        // TODO: Read from stdin
-        // TODO: If data, send to socket
+        // Read from stdin
+        int bytes_recvd = recvfrom(sockfd, server_buf, BUF_SIZE, 0, (struct sockaddr*) &serveraddr, &serversize);
+        
+        if (bytes_recvd == 0) {
+            continue;
+        } else if (bytes_recvd < 0) {
+            return errno;
+        }
+
+        if (!server_connected) {
+            server_connected = true;
+            char* server_ip = inet_ntoa(serveraddr.sin_addr);
+            int server_port = ntohs(serveraddr.sin_port);
+            cout << "Server connected from " << server_ip << ":" << server_port<< endl;
+        }
+
+        write(1, server_buf, bytes_recvd);
+            
+        ssize_t read_len = read(0, server_buf, BUF_SIZE);
+        if (read_len > 0) {
+            if (server_connected) {
+                ssize_t did_send = sendto(sockfd, server_buf, read_len, 0, (struct sockaddr*)&serveraddr, serversize);
+                
+                if (did_send < 0) {
+                    cerr << "Send error: " << strerror(errno) << endl;
+                    return errno;
+                } else if (did_send != read_len) {
+                    cerr << "Partial send: " << did_send << " of " << read_len << " bytes" << endl;
+                }
+            }
+        } else if (read_len < 0) {
+            cerr << "Stdin read error: " << strerror(errno) << endl;
+            return errno;
+        } else if (read_len == 0) {
+            // EOF on stdin
+            break;
+        }
     }
 
+    cout << "Closing socket and exiting..." << endl;
+    close(sockfd);
     return 0;
 }

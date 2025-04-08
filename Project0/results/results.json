@@ -1,0 +1,64 @@
+{
+    "tests": [
+        {
+            "name": "Compilation",
+            "score": 0,
+            "max_score": 0,
+            "status": "passed",
+            "number": "0"
+        },
+        {
+            "name": "Data Transport (Your Client <-> Your Server): Small, ASCII only file (10 KB)",
+            "score": 0.0,
+            "max_score": 10,
+            "status": "failed",
+            "output": "Your server didn't produce the expected result.\nWe inputted 10000 bytes in your client and we received 192 bytes with a percent difference of 99.96%\nYour client didn't produce the expected result.\nWe inputted 10000 bytes in your server and we received 78 bytes with a percent difference of 100.0%\n",
+            "number": "1.1"
+        },
+        {
+            "name": "Data Transport (Your Client <-> Your Server): Small file (10 KB)",
+            "score": 0.0,
+            "max_score": 10,
+            "status": "failed",
+            "output": "Your server didn't produce the expected result.\nWe inputted 10000 bytes in your client and we received 192 bytes with a percent difference of 99.99%\nYour client didn't produce the expected result.\nWe inputted 10000 bytes in your server and we received 78 bytes with a percent difference of 100.0%\n",
+            "number": "1.2"
+        },
+        {
+            "name": "Data Transport (Your Client <-> Reference Server): Small file (10 KB)",
+            "score": 0.0,
+            "max_score": 20,
+            "status": "failed",
+            "output": "Your client didn't send data back to our server correctly.\nWe inputted 10000 bytes in your client and we received 0 bytes with a percent difference of 100.0%\nYour client didn't receive data from our server correctly.\nWe sent 10000 bytes and your client received 78 bytes with a percent difference of 100.0%\n",
+            "number": "1.3"
+        },
+        {
+            "name": "Data Transport (Your Client <-> Reference Server): Small file (10 KB, client only)",
+            "score": 0.0,
+            "max_score": 20,
+            "status": "failed",
+            "output": "Your client didn't send data back to our server correctly.\nWe inputted 10000 bytes in your client and we received 0 bytes with a percent difference of 100.0%\nYour client didn't receive data from our server correctly.\nWe sent 1 bytes and your client received 78 bytes with a percent difference of 100.0%\n",
+            "number": "1.4"
+        },
+        {
+            "name": "Data Transport (Reference Client <-> Your Server): Small file (10 KB)",
+            "score": 0.0,
+            "max_score": 20,
+            "status": "failed",
+            "output": "Your server didn't receive data from our client correctly.\nWe sent 10000 bytes and your server received 192 bytes with a percent difference of 99.99%\nYour server didn't send data back to our client correctly.\nWe inputted 10000 bytes in your server and we received 0 bytes with a percent difference of 100.0%\n",
+            "number": "1.5"
+        },
+        {
+            "name": "Data Transport (Reference Client <-> Your Server): Small file (10 KB, server only)",
+            "score": 0.0,
+            "max_score": 20,
+            "status": "failed",
+            "output": "Your server didn't receive data from our client correctly.\nWe sent 1 bytes and your server received 192 bytes with a percent difference of 100.0%\nYour server didn't send data back to our client correctly.\nWe inputted 10000 bytes in your server and we received 0 bytes with a percent difference of 100.0%\n",
+            "number": "1.6"
+        }
+    ],
+    "leaderboard": [],
+    "visibility": "visible",
+    "execution_time": "19.47",
+    "score": 0.0,
+    "test_output_format": "md"
+}
