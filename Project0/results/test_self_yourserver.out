@@ -1,0 +1,6 @@
+Starting server on port 8085
+Socket created with descriptor: 3
+Server address configured for port 8085
+Socket successfully bound to address
+Server started successfully. Waiting for clients...
+Terminated
