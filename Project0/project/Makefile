@@ -1,5 +1,5 @@
-CXX=g++
-CPPFLAGS=-Wall -Wextra
+CC=gcc
+CFLAGS=-Wall -Wextra
 LDFLAGS=
 
 DEPS=
@@ -7,13 +7,13 @@ DEPS=
 all: server client
 
 server: server.o $(DEPS)
-	$(CXX) server.o -o server $(LDFLAGS)
+	$(CC) server.o -o server $(LDFLAGS)
 
 client: client.o $(DEPS)
-	$(CXX) client.o -o client $(LDFLAGS)
+	$(CC) client.o -o client $(LDFLAGS)
 
-%.o: %.cpp
-	$(CXX) $(CPPFLAGS) -c -o $@ $<
+%.o: %.c
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 clean:
 	@rm -rf server client *.bin *.o

@@ -40,7 +40,6 @@ int main(int argc, char** argv) {
 
     // CONSTRUCTED SERVER ADDRESS
     struct sockaddr_in servaddr;
-    // memset(&servaddr, 0, sizeof(servaddr));
     servaddr.sin_family = AF_INET; // use IPv4
     servaddr.sin_addr.s_addr = INADDR_ANY; // accept all connections
                         // same as inet_addr("0.0.0.0") 
@@ -51,7 +50,6 @@ int main(int argc, char** argv) {
     cerr << "Server address configured for port " << port << endl;
 
     // BINDED ADDRESS TO SOCKET
-    /* 3. Let operating system know about our config */
     int did_bind = bind(sockfd, (struct sockaddr*) &servaddr, sizeof(servaddr));
     if (did_bind < 0) { // Error if did_bind < 0 :(
         cerr << "Bind failed: " << strerror(errno) << endl;
@@ -61,62 +59,32 @@ int main(int argc, char** argv) {
     cerr << "Socket successfully bound to address" << endl;
 
     // CREATED sockaddr_in AND socklen_t BUFFERS TO STORE CLIENT ADDRESSES
-    /* 4. Create buffer to store incoming data */
     int BUF_SIZE = 1024;
     char client_buf[BUF_SIZE];
     struct sockaddr_in clientaddr = {0}; // Same information, but about client
-    // bool client_connected = false;
     socklen_t clientsize = sizeof(clientaddr);
+    bool clientReady = false;
 
     cerr << "Server started successfully. Waiting for clients..." << endl;
 
     while (true) {
         // Receive from client
         ssize_t recv_len = recvfrom(sockfd, client_buf, BUF_SIZE, 0, (struct sockaddr*)&clientaddr, &clientsize);
-        
-        if (recv_len <= 0) {
-            // continue;
-        } else {
-            cerr << "RECEIVED INFO FROM CLIENT" << endl; 
-        }
 
-        // if (recv_len == 0) {
-        //     continue;
-        // } else if (recv_len < 0 && client_connected == true) {
-        //     cerr << "lmao" << endl;
-        //     return errno;
-        // }
-
-        // client_connected = true;
         char* client_ip = inet_ntoa(clientaddr.sin_addr);
         int client_port = ntohs(clientaddr.sin_port);
-        // cerr << "Client connected from " << client_ip << ":" << client_port<< endl;
 
-        write(1, client_buf, recv_len);
+        if (0 < recv_len || clientReady) { //set a flag to get ready to accept
+            clientReady = true;
+            write(1, client_buf, recv_len);
+            ssize_t read_len = read(0, client_buf, BUF_SIZE);
 
-        // Read from stdin
-        ssize_t read_len = read(0, client_buf, BUF_SIZE);
-        if (read_len > 0) {
-            ssize_t did_send = sendto(sockfd, client_buf, read_len, 0, (struct sockaddr*)&clientaddr, clientsize);
-            
-            if (did_send < 0) {
-                cerr << "Send error: " << strerror(errno) << endl;
-                return errno;
-            } else if (did_send != read_len) {
-                cerr << "Partial send: " << did_send << " of " << read_len << " bytes" << endl;
-            }
-        } 
-        // else if (read_len < 0) {
-        //     cerr << "Stdin read error: " << strerror(errno) << endl;
-        //     return errno;
-        // } else if (read_len == 0) {
-        //     // EOF on stdin
-        //     cerr << "readlen was 0 so we exit" << endl;
-        //     break;
-        // }
+            if (read_len > 0) {
+                ssize_t did_send = sendto(sockfd, client_buf, read_len, 0, (struct sockaddr*)&clientaddr, clientsize);
+            } 
+        }
     }
 
-    cerr << "Closing socket and exiting..." << endl;
     close(sockfd);
     return 0;
 }

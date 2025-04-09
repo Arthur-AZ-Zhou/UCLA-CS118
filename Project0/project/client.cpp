@@ -39,7 +39,7 @@ int main(int argc, char** argv) {
     fcntl(STDIN_FILENO, F_SETFL, flags);
 
     // TODO: Construct server address
-    struct sockaddr_in serveraddr;
+    struct sockaddr_in serveraddr = {0};
     serveraddr.sin_family = AF_INET; // use IPv4
     serveraddr.sin_addr.s_addr = INADDR_ANY;
 
@@ -57,51 +57,18 @@ int main(int argc, char** argv) {
     while (true) {
         // Read from stdin
         int bytes_recvd = recvfrom(sockfd, server_buf, BUF_SIZE, 0, (struct sockaddr*) &serveraddr, &serversize);
-        // cout << "num bytes received: " << bytes_recvd << endl;
-        
-        if (bytes_recvd <= 0) {
-            // continue;
-        } else {
-            cerr << "RECEIVED INFO FROM SERVER" << endl; 
-        }
-
-        // if (bytes_recvd == 0) {
-        //     continue;
-        // } else if (bytes_recvd < 0) {
-        //     return errno;
-        // }
 
         char* server_ip = inet_ntoa(serveraddr.sin_addr);
         int server_port = ntohs(serveraddr.sin_port);
-        // cerr << "Server connected from " << server_ip << ":" << server_port<< endl;
 
         write(1, server_buf, bytes_recvd);
-            
         ssize_t read_len = read(0, server_buf, BUF_SIZE);
-        // cerr << "make sure this line is notblocking" << endl;
+
         if (read_len > 0) {
-            cerr << "WE ARE IN IF FUNCTION" << endl;
             ssize_t did_send = sendto(sockfd, server_buf, read_len, 0, (struct sockaddr*)&serveraddr, serversize);
-            cerr << "DIDSEND: " << did_send << endl;
-            
-            if (did_send < 0) {
-                cerr << "Send error: " << strerror(errno) << endl;
-                return errno;
-            } else if (did_send != read_len) {
-                cerr << "Partial send: " << did_send << " of " << read_len << " bytes" << endl;
-            }
         } 
-        // else if (read_len < 0) {
-        //     cerr << "Stdin read error: " << strerror(errno) << endl;
-        //     return errno;
-        // } else if (read_len == 0) {
-        //     // EOF on stdin
-        //     cerr << "we broke?" << endl;
-        //     break;
-        // }
     }
 
-    cerr << "Closing socket and exiting..." << endl;
     close(sockfd);
     return 0;
 }
