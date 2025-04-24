@@ -1,14 +1,25 @@
 CC = g++
-CFLAGS = -std=c++11 -Wall -g
+CPPFLAGS = -Wall -Wextra
+LDFLAGS = 
+LDLIBS = 
 
-SRCS = client.cpp server.cpp io.cpp transport.cpp
-OBJS = $(SRCS:.cpp=.o)
+DEPS = transport.o io.o
 
-all: $(OBJS)
-	$(CC) $(OBJS) -o app
+# Targets for compiling and linking
+all: server client 
 
+# Server target
+server: server.o $(DEPS)
+	$(CC) $(LDFLAGS) $^ -o $@
+
+# Client target
+client: client.o $(DEPS)
+	$(CC) $(LDFLAGS) $^ -o $@
+
+# Rule for compiling .cpp files to .o
 %.o: %.cpp
-	$(CC) $(CFLAGS) -c $<
+	$(CC) $(CPPFLAGS) -c $< -o $@
 
+# Clean up object files and executables
 clean:
-	rm -f $(OBJS) app
+	@rm -rf server client *.bin *.o

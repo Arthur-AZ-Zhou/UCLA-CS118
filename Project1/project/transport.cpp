@@ -74,10 +74,11 @@ void listen_loop(int sockfd, struct sockaddr_in* addr, int initial_state,
 
     // Set socket for nonblocking
     int flags = fcntl(sockfd, F_GETFL);
+    int opt_val = 1;
     flags |= O_NONBLOCK;
     fcntl(sockfd, F_SETFL, flags);
-    setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &(int) {1}, sizeof(int));
-    setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, &(int) {1}, sizeof(int));
+    setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt_val, sizeof(opt_val));
+    setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, &opt_val, sizeof(opt_val));
 
     // Set initial sequence number
     uint32_t r;
