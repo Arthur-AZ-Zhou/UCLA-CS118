@@ -35,35 +35,44 @@ void (*output)(uint8_t*, size_t);   // Output data from layer
 struct timeval start; // Last packet sent at this time
 struct timeval now;   // Temp for current time
 
+//MY ADDED VARIABLES
+buffer_node* send_bufTail = NULL; // tail of linked list
+bool handshakeCompleted = false; 
+
 // Get data from standard input / make handshake packets
 packet* get_data() {
     switch (state) {
-    case SERVER_AWAIT:
-    case CLIENT_AWAIT:
-    case CLIENT_START:
-    case SERVER_START:
-    default: {
-    }
+        case SERVER_AWAIT:
+            
+        case CLIENT_AWAIT:
+
+        case CLIENT_START:
+
+        case SERVER_START:
+
+        default: 
+            return NULL;
     }
 }
 
 // Process data received from socket
 void recv_data(packet* pkt) {
     switch (state) {
-    case CLIENT_START:
-    case SERVER_START:
-    case SERVER_AWAIT:
-    case CLIENT_AWAIT: {
-    }
-    default: {
-    }
+        case CLIENT_START:
+
+        case SERVER_START:
+
+        case SERVER_AWAIT:
+
+        case CLIENT_AWAIT: 
+
+        default: 
+            return;
     }
 }
 
 // Main function of transport layer; never quits
-void listen_loop(int sockfd, struct sockaddr_in* addr, int initial_state,
-                 ssize_t (*input_p)(uint8_t*, size_t),
-                 void (*output_p)(uint8_t*, size_t)) {
+void listen_loop(int sockfd, struct sockaddr_in* addr, int initial_state, ssize_t (*input_p)(uint8_t*, size_t), void (*output_p)(uint8_t*, size_t)) {
 
     // Set initial state (whether client or server)
     state = initial_state;
@@ -101,8 +110,7 @@ void listen_loop(int sockfd, struct sockaddr_in* addr, int initial_state,
     while (true) {
         memset(buffer, 0, sizeof(packet) + MAX_PAYLOAD);
         // Get data from socket
-        int bytes_recvd = recvfrom(sockfd, &buffer, sizeof(buffer), 0,
-                                   (struct sockaddr*) addr, &addr_size);
+        int bytes_recvd = recvfrom(sockfd, &buffer, sizeof(buffer), 0, (struct sockaddr*) addr, &addr_size);
         // If data, process it
         if (bytes_recvd > 0) {
             print_diag(pkt, RECV);
