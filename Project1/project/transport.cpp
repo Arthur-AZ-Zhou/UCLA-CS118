@@ -35,17 +35,47 @@ void (*output)(uint8_t*, size_t);   // Output data from layer
 struct timeval start; // Last packet sent at this time
 struct timeval now;   // Temp for current time
 
-//MY ADDED VARIABLES
+//MY ADDED VARIABLES & HELPER FUNCTIONS======================================================================
 buffer_node* send_bufTail = NULL; // tail of linked list
 bool handshakeCompleted = false; 
+
+//NOTE: Socket file descriptor (sockfd) for UDP: int sockfd = socket(AF_INET, SOCK_DGRAM, 0); 
+
+packet* getPureAck() {
+    packet* p = new packet();
+
+    p->seq = htons(0); //pure ACKS SEQ is 0
+    p->ack = htons(ack);
+    p->length = htons(0);
+    p->win = htons(MAX_WINDOW);
+    p->flags = ACK;
+    p->unused = htons(0);
+    //NO PAYLOAD
+
+    return p;
+}
+
+void sendPureAck(int sockFD, sockaddr_in* socketAddr) {
+    packet* p = getPureAck();
+
+    sendto(sockFD, p, sizeof(packet), 0, (sockaddr*) socketAddr, sizeof(sockaddr_in));
+    cerr << "sockFD: " << sockFD << ", packet SEQ and ACK: " << p->seq << " & " << p->ack << endl;
+
+    delete p; //FREE UP MEMORY IMPORTANT
+}
+//END OF MY ADDED VARIABLES & HELPER FUNCTIONS======================================================================
 
 // Get data from standard input / make handshake packets
 packet* get_data() {
     switch (state) {
-        case SERVER_AWAIT:
-            
-        case CLIENT_AWAIT:
-
+        case SERVER_AWAIT: //return nullptr
+            cerr << "SERVER IS AWAITING" << endl;
+            // cerr << "trigger1" << endl;
+            return nullptr;
+        case CLIENT_AWAIT: //also return nullptr
+            cerr << "CLIENT IS AWAITING" << endl;
+            // cerr << "trigger2" << endl;
+            return nullptr;
         case CLIENT_START:
 
         case SERVER_START:
