@@ -43,9 +43,10 @@ bool handshakeCompleted = false;
 
 //NOTE: Socket file descriptor (sockfd) for UDP: int sockfd = socket(AF_INET, SOCK_DGRAM, 0); 
 
-packet* getPureAck() { //for starting handshake
+packet* makePureAck() { //for starting handshake
     packet* p = new packet();
 
+    memset(p, 0, sizeof(packet));
     p->seq = htons(0); //pure ACKS SEQ is 0
     p->ack = htons(ack);
     p->length = htons(0);
@@ -58,7 +59,7 @@ packet* getPureAck() { //for starting handshake
 }
 
 void sendPureAck(int sockFD, sockaddr_in* socketAddr) { //for fast retransmit, processing expected packet and send pure ack, traverse LL until expecetd packet found
-    packet* p = getPureAck();
+    packet* p = makePureAck();
 
     sendto(sockFD, p, sizeof(packet), 0, (sockaddr*) socketAddr, sizeof(sockaddr_in));
     cerr << "sockFD: " << sockFD << ", packet SEQ and ACK: " << p->seq << " & " << p->ack << endl;
@@ -82,13 +83,29 @@ packet* get_data() {
             if (handshakeCompleted) { //client sends server syn, then server sends back syn ack, (then client sends back ack)
                 cerr << "FINAL HANDSHAKE ACK SENT BY CLIENT, ACK NUMBER: " << ack << ", SEQ NUMBER: " << seq << "\nSTARTING NORMAL TRANSMISSION" << endl;
 
-                state = -1;
-                return getPureAck(); // NO PAYLOAD NEEDED ACCORDING TO SPEC
+                state = -1; //default state
+                return makePureAck(); // NO PAYLOAD NEEDED ACCORDING TO SPEC
             } else { //(client sends server syn), then server sends back syn ack, then client sends back ack
-                
-            }
-        case SERVER_START:
+                packet* p = makePureAck();
 
+                p->seq = htons(seq);
+                p->ack = htons(0); //ACK is 0 when we start off
+                p->flags = SYN;
+                cerr << "FIRST PART OF HANDSHAKE: " << p->seq << ", " << p->ack << ", " << p->flags << endl;
+
+                handshakeCompleted = true;
+                state = CLIENT_AWAIT;
+                return p;
+            }
+        case SERVER_START: //client sends server syn, (then server sends back syn ack), then client sends back ack
+            cerr << "SERVER SENDING SYN ACK" << endl;
+
+            packet* p = makePureAck();
+            p->seq = htons(seq);
+            p->flags = 0b011; //BOTH SYN AND ACK ARE ON
+
+            handshakeCompleted = true;
+            return p;  
         default: 
             return NULL;
     }
