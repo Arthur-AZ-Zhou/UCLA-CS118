@@ -7,6 +7,7 @@
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <unistd.h>
+#include <bits/stdc++.h>
 using namespace std;
 
 /*
@@ -21,7 +22,7 @@ int our_max_receiving_window = MIN_WINDOW; // Our max receiving window
 int our_recv_window = 0;                   // Bytes in our recv buf
 int dup_acks = 0;        // Duplicate acknowledgements received
 uint32_t ack = 0;        // Acknowledgement number
-uint32_t seq = 0;        // Sequence number
+uint32_t seq = 0;        // Sequence number, GONNA BE MADE TO BE RANDOM AT START
 uint32_t last_ack = 0;   // Last ACK number to keep track of duplicate ACKs
 bool pure_ack = false;   // Require ACK to be sent out
 packet* base_pkt = NULL; // Lowest outstanding packet to be sent out
@@ -37,11 +38,12 @@ struct timeval now;   // Temp for current time
 
 //MY ADDED VARIABLES & HELPER FUNCTIONS======================================================================
 buffer_node* send_bufTail = NULL; // tail of linked list
+stack<buffer_node*> buffNodeStack;
 bool handshakeCompleted = false; 
 
 //NOTE: Socket file descriptor (sockfd) for UDP: int sockfd = socket(AF_INET, SOCK_DGRAM, 0); 
 
-packet* getPureAck() {
+packet* getPureAck() { //for starting handshake
     packet* p = new packet();
 
     p->seq = htons(0); //pure ACKS SEQ is 0
@@ -55,7 +57,7 @@ packet* getPureAck() {
     return p;
 }
 
-void sendPureAck(int sockFD, sockaddr_in* socketAddr) {
+void sendPureAck(int sockFD, sockaddr_in* socketAddr) { //for fast retransmit, processing expected packet and send pure ack, traverse LL until expecetd packet found
     packet* p = getPureAck();
 
     sendto(sockFD, p, sizeof(packet), 0, (sockaddr*) socketAddr, sizeof(sockaddr_in));
@@ -76,8 +78,15 @@ packet* get_data() {
             cerr << "CLIENT IS AWAITING" << endl;
             // cerr << "trigger2" << endl;
             return nullptr;
-        case CLIENT_START:
+        case CLIENT_START: //ones in parenthesis are the valid ones
+            if (handshakeCompleted) { //client sends server syn, then server sends back syn ack, (then client sends back ack)
+                cerr << "FINAL HANDSHAKE ACK SENT BY CLIENT, ACK NUMBER: " << ack << ", SEQ NUMBER: " << seq << "\nSTARTING NORMAL TRANSMISSION" << endl;
 
+                state = -1;
+                return getPureAck(); // NO PAYLOAD NEEDED ACCORDING TO SPEC
+            } else { //(client sends server syn), then server sends back syn ack, then client sends back ack
+                
+            }
         case SERVER_START:
 
         default: 
