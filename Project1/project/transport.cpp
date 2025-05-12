@@ -54,7 +54,7 @@ packet* makePureAck() {  //NO PAYLOAD
     p->ack = htons(ack);
     p->length = htons(0);
     p->win = htons(MAX_WINDOW);
-    p->flags = ACK;
+    p->flags = 0b0010; //ACK LSB is at 1
     p->unused = htons(0);
     //NO PAYLOAD
 
@@ -96,6 +96,14 @@ void sendDataPacket(uint8_t* data, int len, int sockFD, sockaddr_in* socketAddr)
     cerr << "sockFD: " << sockFD << ", packet SEQ and ACK and LENGTH: " << p->seq << " & " << p->ack << p->length << endl;
 
     delete p;
+}
+
+void printBytesBinary(uint16_t value) {
+    uint8_t high = (value >> 8) & 0xFF; 
+    uint8_t low  = value & 0xFF; 
+
+    cerr << "first 8 bits: " << bitset<8>(high) << endl;
+    cerr << "second 8 bites: " << bitset<8>(low) << endl;
 }
 //END OF MY ADDED VARIABLES & HELPER FUNCTIONS======================================================================
 
@@ -169,7 +177,23 @@ void recv_data(packet* p) {
         case CLIENT_START:
             return;
         case SERVER_START: //client sends server syn, then server sends back syn ack, (then client sends back ack)
+            // cerr << "trigger server start" << endl;
+
+            if (p->flags & 0b0010) { //ACK is marked with LSB in position 1 is 1
+                // cerr << p->flags << endl
+                printBytesBinary(p->flags);
+                cerr << "beginning transmission" << endl;
+
+                if (0 < ntohs(p->length)) {
+                    output(p->payload, ntohs(p->length));
+                    // cout << p->payload << endl;
+                    ack = ntohs(p->seq) + 1;
+                }
+
+                state = -1;
+            }
             
+            return;
         case SERVER_AWAIT: //(client sends server syn), then server sends back syn ack, then client sends back ack
 
         case CLIENT_AWAIT: //client sends server syn, (then server sends back syn ack), then client sends back ack
