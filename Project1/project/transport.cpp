@@ -15,6 +15,7 @@ using namespace std;
  * not necessarily required for a valid implementation.
  * feel free to edit/remove.
  */
+//DEFAULT STATE IS -1
 int state = 0;           // Current state for handshake
 int our_send_window = 0; // Total number of bytes in our send buf
 int their_receiving_window = MIN_WINDOW;   // Receiver window size
@@ -40,10 +41,12 @@ struct timeval now;   // Temp for current time
 buffer_node* send_bufTail = nullptr; // tail of linked list
 stack<buffer_node*> buffNodeStack;
 bool handshakeCompleted = false; 
+int sockFDRcvd = 0;
+struct sockaddr_in* socketAddr;
 
 //NOTE: Socket file descriptor (sockfd) for UDP: int sockfd = socket(AF_INET, SOCK_DGRAM, 0); 
 
-packet* makePureAck() { //for starting handshake
+packet* makePureAck() {  //NO PAYLOAD
     packet* p = new packet();
 
     memset(p, 0, sizeof(packet));
@@ -58,17 +61,8 @@ packet* makePureAck() { //for starting handshake
     return p;
 }
 
-void sendPureAck(int sockFD, sockaddr_in* socketAddr) { //for fast retransmit, processing expected packet and send pure ack, traverse LL until expecetd packet found
-    packet* p = makePureAck();
-
-    sendto(sockFD, p, sizeof(packet), 0, (sockaddr*) socketAddr, sizeof(sockaddr_in));
-    cerr << "sockFD: " << sockFD << ", packet SEQ and ACK: " << p->seq << " & " << p->ack << endl;
-
-    delete p; //FREE UP MEMORY IMPORTANT
-}
-
-packet* makeDataPacket(uint8_t* data, int len) {
-    packet* p = static_cast<packet*>(calloc(1, sizeof(packet) + len));
+packet* makeDataPacket(uint8_t* data, int len) { //YES PAYLOAD
+    packet* p = static_cast<packet*> (calloc(1, sizeof(packet) + len));
 
     if (p == nullptr) {
         cerr << "ALLOCATION FAILURE FOR MAKEDATAPACKET" << endl;
@@ -79,11 +73,29 @@ packet* makeDataPacket(uint8_t* data, int len) {
     p->ack = htons(ack);
     p->length = htons(static_cast<uint16_t>(len));
     p->win = htons(MAX_WINDOW);
-    p->flags = 0; //NORMAL PACKET AFTER HANDSHAKE
+    p->flags = 0; //DEFAULT PACKET AFTER HANDSHAKE
     p->unused = htons(0);
     memcpy(p->payload, data, len);
 
     return p;
+}
+
+void sendPureAck(int sockFD, sockaddr_in* socketAddr) { //NO PAYLOAD
+    packet* p = makePureAck();
+
+    sendto(sockFD, p, sizeof(packet), 0, (sockaddr*) socketAddr, sizeof(sockaddr_in));
+    cerr << "sockFD: " << sockFD << ", packet SEQ and ACK: " << p->seq << " & " << p->ack << endl;
+
+    delete p; //FREE UP MEMORY IMPORTANT
+}
+
+void sendDataPacket(uint8_t* data, int len, int sockFD, sockaddr_in* socketAddr) { //YES PPAYLOAD
+    packet* p = makeDataPacket(data, len);
+
+    sendto(sockFD, p, sizeof(packet), 0, (sockaddr*) socketAddr, sizeof(sockaddr_in));
+    cerr << "sockFD: " << sockFD << ", packet SEQ and ACK and LENGTH: " << p->seq << " & " << p->ack << p->length << endl;
+
+    delete p;
 }
 //END OF MY ADDED VARIABLES & HELPER FUNCTIONS======================================================================
 
@@ -102,9 +114,9 @@ packet* get_data() {
 
         case CLIENT_START: //ones in parenthesis are the valid ones
             if (handshakeCompleted) { //client sends server syn, then server sends back syn ack, (then client sends back ack)
-                cerr << "FINAL HANDSHAKE ACK SENT BY CLIENT, ACK NUMBER: " << ack << ", SEQ NUMBER: " << seq << "\nSTARTING NORMAL TRANSMISSION" << endl;
+                cerr << "FINAL HANDSHAKE ACK SENT BY CLIENT, ACK NUMBER: " << ack << ", SEQ NUMBER: " << seq << "\nSTARTING DEFAULT TRANSMISSION" << endl;
 
-                state = -1; //NORMAL state
+                state = -1; //DEFAULT state is -1
                 return makePureAck(); // NO PAYLOAD NEEDED ACCORDING TO SPEC
             } else { //(client sends server syn), then server sends back syn ack, then client sends back ack
                 packet* p = makePureAck();
@@ -152,15 +164,15 @@ packet* get_data() {
 }
 
 // Process data received from socket
-void recv_data(packet* pkt) {
+void recv_data(packet* p) {
     switch (state) {
         case CLIENT_START:
+            return;
+        case SERVER_START: //client sends server syn, then server sends back syn ack, (then client sends back ack)
+            
+        case SERVER_AWAIT: //(client sends server syn), then server sends back syn ack, then client sends back ack
 
-        case SERVER_START:
-
-        case SERVER_AWAIT:
-
-        case CLIENT_AWAIT: 
+        case CLIENT_AWAIT: //client sends server syn, (then server sends back syn ack), then client sends back ack
 
         default: 
             return;
@@ -214,12 +226,10 @@ void listen_loop(int sockfd, struct sockaddr_in* addr, int initial_state, ssize_
         }
 
         packet* tosend = get_data();
-        // Data available to send
-        if (tosend != nullptr) {
+
+        if (tosend != nullptr) { // Data available to send
             // Code to send packet
-        }
-        // Received a packet and must send an ACK
-        else if (pure_ack) {
+        } else if (pure_ack) { // Received a packet and must send an ACK
             // Code to send ACK
         }
 
