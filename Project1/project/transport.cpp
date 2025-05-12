@@ -25,10 +25,10 @@ uint32_t ack = 0;        // Acknowledgement number
 uint32_t seq = 0;        // Sequence number, GONNA BE MADE TO BE RANDOM AT START
 uint32_t last_ack = 0;   // Last ACK number to keep track of duplicate ACKs
 bool pure_ack = false;   // Require ACK to be sent out
-packet* base_pkt = NULL; // Lowest outstanding packet to be sent out
+packet* base_pkt = nullptr; // Lowest outstanding packet to be sent out
 
-buffer_node* recv_buf = NULL; // Linked list storing out of order received packets
-buffer_node* send_buf = NULL; // Linked list storing packets that were sent but not acknowledged
+buffer_node* recv_buf = nullptr; // Linked list storing out of order received packets
+buffer_node* send_buf = nullptr; // Linked list storing packets that were sent but not acknowledged
 
 ssize_t (*input)(uint8_t*, size_t); // Get data from layer
 void (*output)(uint8_t*, size_t);   // Output data from layer
@@ -37,7 +37,7 @@ struct timeval start; // Last packet sent at this time
 struct timeval now;   // Temp for current time
 
 //MY ADDED VARIABLES & HELPER FUNCTIONS======================================================================
-buffer_node* send_bufTail = NULL; // tail of linked list
+buffer_node* send_bufTail = nullptr; // tail of linked list
 stack<buffer_node*> buffNodeStack;
 bool handshakeCompleted = false; 
 
@@ -66,6 +66,25 @@ void sendPureAck(int sockFD, sockaddr_in* socketAddr) { //for fast retransmit, p
 
     delete p; //FREE UP MEMORY IMPORTANT
 }
+
+packet* makeDataPacket(uint8_t* data, int len) {
+    packet* p = static_cast<packet*>(calloc(1, sizeof(packet) + len));
+
+    if (p == nullptr) {
+        cerr << "ALLOCATION FAILURE FOR MAKEDATAPACKET" << endl;
+        return nullptr;
+    }
+
+    p->seq = htons(seq);
+    p->ack = htons(ack);
+    p->length = htons(static_cast<uint16_t>(len));
+    p->win = htons(MAX_WINDOW);
+    p->flags = 0; //NORMAL PACKET AFTER HANDSHAKE
+    p->unused = htons(0);
+    memcpy(p->payload, data, len);
+
+    return p;
+}
 //END OF MY ADDED VARIABLES & HELPER FUNCTIONS======================================================================
 
 // Get data from standard input / make handshake packets
@@ -75,15 +94,17 @@ packet* get_data() {
             cerr << "SERVER IS AWAITING" << endl;
             // cerr << "trigger1" << endl;
             return nullptr;
+
         case CLIENT_AWAIT: //also return nullptr
             cerr << "CLIENT IS AWAITING" << endl;
             // cerr << "trigger2" << endl;
             return nullptr;
+
         case CLIENT_START: //ones in parenthesis are the valid ones
             if (handshakeCompleted) { //client sends server syn, then server sends back syn ack, (then client sends back ack)
                 cerr << "FINAL HANDSHAKE ACK SENT BY CLIENT, ACK NUMBER: " << ack << ", SEQ NUMBER: " << seq << "\nSTARTING NORMAL TRANSMISSION" << endl;
 
-                state = -1; //default state
+                state = NORMAL; //default state
                 return makePureAck(); // NO PAYLOAD NEEDED ACCORDING TO SPEC
             } else { //(client sends server syn), then server sends back syn ack, then client sends back ack
                 packet* p = makePureAck();
@@ -97,17 +118,36 @@ packet* get_data() {
                 state = CLIENT_AWAIT;
                 return p;
             }
+
         case SERVER_START: //client sends server syn, (then server sends back syn ack), then client sends back ack
-            cerr << "SERVER SENDING SYN ACK" << endl;
+            if (handshakeCompleted) {
+                return nullptr;
+            } else {
+                cerr << "SERVER SENDING SYN ACK" << endl;
+                packet* p = makePureAck();
 
-            packet* p = makePureAck();
-            p->seq = htons(seq);
-            p->flags = 0b011; //BOTH SYN AND ACK ARE ON
+                p->seq = htons(seq);
+                p->flags = 0b011; //BOTH SYN AND ACK ARE ON
 
-            handshakeCompleted = true;
-            return p;  
+                handshakeCompleted = true;
+                return p;  
+            }
+
         default: 
-            return NULL;
+            if (our_send_window < their_receiving_window) {
+                uint8_t readPayload[MAX_PAYLOAD];
+                int bytes_read = input(readPayload, MAX_PAYLOAD);
+
+                if (0 < bytes_read) {
+                    cerr << "RECEIVING WINDOW SIZE: " << their_receiving_window << ", SEND WINDOW SIZE: " << our_send_window << endl;
+
+                    return makeDataPacket(readPayload, bytes_read);
+                }
+
+                return nullptr;
+            } else {
+                return nullptr;
+            }
     }
 }
 
@@ -154,8 +194,8 @@ void listen_loop(int sockfd, struct sockaddr_in* addr, int initial_state, ssize_
     seq = (rand() % 10) * 100 + 100;
 
     // Setting timers
-    gettimeofday(&now, NULL);
-    gettimeofday(&start, NULL);
+    gettimeofday(&now, nullptr);
+    gettimeofday(&start, nullptr);
 
     // Create buffer for incoming data
     char buffer[sizeof(packet) + MAX_PAYLOAD] = {0};
@@ -175,7 +215,7 @@ void listen_loop(int sockfd, struct sockaddr_in* addr, int initial_state, ssize_
 
         packet* tosend = get_data();
         // Data available to send
-        if (tosend != NULL) {
+        if (tosend != nullptr) {
             // Code to send packet
         }
         // Received a packet and must send an ACK
@@ -184,17 +224,13 @@ void listen_loop(int sockfd, struct sockaddr_in* addr, int initial_state, ssize_
         }
 
         // Check if timer went off
-        gettimeofday(&now, NULL);
-        if (TV_DIFF(now, start) >= RTO && base_pkt != NULL) {
+        gettimeofday(&now, nullptr);
+        if (TV_DIFF(now, start) >= RTO && base_pkt != nullptr) {
             // Handle RTO
-        }
-        // Duplicate ACKS detected
-        else if (dup_acks == DUP_ACKS && base_pkt != NULL) {
+        } else if (dup_acks == DUP_ACKS && base_pkt != nullptr) { // Duplicate ACKS detected
             // Handle duplicate ACKs
-        }
-        // No data to send, so restart timer
-        else if (base_pkt == NULL) {
-            gettimeofday(&start, NULL);
+        } else if (base_pkt == nullptr) { // No data to send, so restart timer
+            gettimeofday(&start, nullptr);
         }
     }
 }
