@@ -104,7 +104,7 @@ packet* get_data() {
             if (handshakeCompleted) { //client sends server syn, then server sends back syn ack, (then client sends back ack)
                 cerr << "FINAL HANDSHAKE ACK SENT BY CLIENT, ACK NUMBER: " << ack << ", SEQ NUMBER: " << seq << "\nSTARTING NORMAL TRANSMISSION" << endl;
 
-                state = NORMAL; //default state
+                state = -1; //NORMAL state
                 return makePureAck(); // NO PAYLOAD NEEDED ACCORDING TO SPEC
             } else { //(client sends server syn), then server sends back syn ack, then client sends back ack
                 packet* p = makePureAck();
