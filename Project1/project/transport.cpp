@@ -131,8 +131,7 @@ packet* get_data() {
                 packet* p = makePureAck();
 
                 p->seq = htons(seq);
-                p->ack = htons(0); //ACK is 0 when we start off
-                p->flags = SYN;
+                p->flags = 0b0001;
                 cerr << "FIRST PART OF HANDSHAKE: " << p->seq << ", " << p->ack << ", " << p->flags << endl;
 
                 handshakeCompleted = true;
@@ -147,7 +146,7 @@ packet* get_data() {
                 packet* p = makePureAck();
 
                 p->seq = htons(seq);
-                p->flags = 0b011; //BOTH SYN AND ACK ARE ON
+                p->flags = 0b011; //turn BOTH SYN AND ACK ARE ON
 
                 handshakeCompleted = true;
                 return p;  
@@ -155,7 +154,8 @@ packet* get_data() {
 
         default: 
             if (our_send_window < their_receiving_window) {
-                uint8_t readPayload[MAX_PAYLOAD]; //PAYLOAD in uint_8
+                // int readPayload[MAX_PAYLOAD];
+                uint8_t readPayload[MAX_PAYLOAD]; //PAYLOAD IS in uint_8
                 int bytes_read = input(readPayload, MAX_PAYLOAD);
 
                 if (0 < bytes_read) {
