@@ -105,6 +105,13 @@ void printBytesBinary(uint16_t value) { //unlike c we have bitset
     cerr << "first 8 bits: " << bitset<8>(high) << endl;
     cerr << "second 8 bites: " << bitset<8>(low) << endl;
 }
+
+void printDeque(deque<buffer_node*> deq) {
+    for (auto it = deq.begin(); it != deq.end(); ++it) {
+        cerr << "SEQ: " << ntohs((*it)->pkt.seq);
+    }
+    cerr << endl;
+}
 //END OF MY ADDED VARIABLES & HELPER FUNCTIONS======================================================================
 
 // Get data from standard input / make handshake packets
@@ -236,6 +243,48 @@ void recv_data(packet* p) {
             return;
 
         default: //HARD PART!!!!!!!!!!!!!!!!!!!!!!!==========================
+        /*
+            static deque<buffer_node*> recvDeque;
+            static deque<buffer_node*> sendDeque;
+
+            if (p->flags & 0b0010) {
+                if (p->flags == last_ack) {
+                    dup_acks++;
+                } else { // Reset current ACK
+                    last_ack = p->flags;
+                    dup_acks = 1;
+                }
+                
+                // 3 duplicate ACKS detected, fast retransmit
+                if (dup_acks == DUP_ACKS && !sendDeque.empty()) {
+                    packet* base_pkt_ptr = &(sendDeque.front()->pkt);
+                    sendto(sockFDrcvd, base_pkt_ptr, sizeof(packet) + ntohs(base_pkt_ptr->length), 0, (sockaddr *) socketAddr, sizeof(sockaddr_in));
+                    print_diag(base_pkt_ptr, RTOD);
+                    dup_acks = 1;
+                }
+
+                // Remove any ACKed packets from the sending buffer and flow control window
+                while (!sendDeque.empty() && ntohs(sendDeque.front()->pkt.seq) < p->ack) {
+                    buffer_node *old = sendDeque.front();
+                    our_send_window -= ntohs(old->pkt.length); // Update sender FCW
+                    sendDeque.pop_front();
+                    free(old);
+                }
+
+                if (sendDeque.empty()) { //reset base packet if deque empty
+                    base_pkt = NULL;
+                } else {
+                    base_pkt = &(sendDeque.front()->pkt); // point base packet to oldest packet
+                    gettimeofday(&start, NULL);            // Restart the timer for the new oldest packet
+                }
+                
+                cerr << "received ACK: " << ntohs(p->ack) << " in deque" << endl;
+                printDeque(sendDeque);
+            }
+            */
+
+            
+
             return;
     }
 }
