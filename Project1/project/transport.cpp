@@ -41,7 +41,7 @@ struct timeval now;   // Temp for current time
 buffer_node* send_bufTail = nullptr; // tail of linked list
 stack<buffer_node*> buffNodeStack;
 bool handshakeCompleted = false; 
-int sockFDRcvd = 0;
+int sockFDrcvd = 0;
 struct sockaddr_in* socketAddr;
 
 //NOTE: Socket file descriptor (sockfd) for UDP: int sockfd = socket(AF_INET, SOCK_DGRAM, 0); 
@@ -71,7 +71,7 @@ packet* makeDataPacket(uint8_t* data, int len) { //YES PAYLOAD
 
     p->seq = htons(seq);
     p->ack = htons(ack);
-    p->length = htons(static_cast<uint16_t>(len));
+    p->length = htons(static_cast<uint16_t> (len));
     p->win = htons(MAX_WINDOW);
     p->flags = 0; //DEFAULT PACKET AFTER HANDSHAKE
     p->unused = htons(0);
@@ -98,7 +98,7 @@ void sendDataPacket(uint8_t* data, int len, int sockFD, sockaddr_in* socketAddr)
     delete p;
 }
 
-void printBytesBinary(uint16_t value) {
+void printBytesBinary(uint16_t value) { //unlike c we have bitset
     uint8_t high = (value >> 8) & 0xFF; 
     uint8_t low  = value & 0xFF; 
 
@@ -123,10 +123,11 @@ packet* get_data() {
         case CLIENT_START: //ones in parenthesis are the valid ones
             if (handshakeCompleted) { //client sends server syn, then server sends back syn ack, (then client sends back ack)
                 cerr << "FINAL HANDSHAKE ACK SENT BY CLIENT, ACK NUMBER: " << ack << ", SEQ NUMBER: " << seq << "\nSTARTING DEFAULT TRANSMISSION" << endl;
-
                 state = -1; //DEFAULT state is -1
+
                 return makePureAck(); // NO PAYLOAD NEEDED ACCORDING TO SPEC
             } else { //(client sends server syn), then server sends back syn ack, then client sends back ack
+                state = CLIENT_AWAIT;
                 packet* p = makePureAck();
 
                 p->seq = htons(seq);
@@ -135,7 +136,6 @@ packet* get_data() {
                 cerr << "FIRST PART OF HANDSHAKE: " << p->seq << ", " << p->ack << ", " << p->flags << endl;
 
                 handshakeCompleted = true;
-                state = CLIENT_AWAIT;
                 return p;
             }
 
@@ -155,15 +155,20 @@ packet* get_data() {
 
         default: 
             if (our_send_window < their_receiving_window) {
-                uint8_t readPayload[MAX_PAYLOAD];
+                uint8_t readPayload[MAX_PAYLOAD]; //PAYLOAD in uint_8
                 int bytes_read = input(readPayload, MAX_PAYLOAD);
 
                 if (0 < bytes_read) {
                     cerr << "RECEIVING WINDOW SIZE: " << their_receiving_window << ", SEND WINDOW SIZE: " << our_send_window << endl;
+                    
+                    for (int i = 0; i < MAX_PAYLOAD; i++) {
+                        cerr << readPayload[i] << endl;
+                    }
 
                     return makeDataPacket(readPayload, bytes_read);
                 }
 
+                cerr << "!!!!!!!!!!!!!!!!0 BYTES READ" << endl;
                 return nullptr;
             } else {
                 return nullptr;
@@ -172,14 +177,17 @@ packet* get_data() {
 }
 
 // Process data received from socket
-void recv_data(packet* p) {
+void recv_data(packet* p) { 
+    //NOTE: everything EXCEPT for flags has to be converted to little endian
     switch (state) {
         case CLIENT_START:
             return;
+
         case SERVER_START: //client sends server syn, then server sends back syn ack, (then client sends back ack)
-            // cerr << "trigger server start" << endl;
+            cerr << "trigger server start" << endl;
 
             if (p->flags & 0b0010) { //ACK is marked with LSB in position 1 is 1
+                state = -1;
                 // cerr << p->flags << endl
                 printBytesBinary(p->flags);
                 cerr << "beginning transmission" << endl;
@@ -188,17 +196,46 @@ void recv_data(packet* p) {
                     output(p->payload, ntohs(p->length));
                     // cout << p->payload << endl;
                     ack = ntohs(p->seq) + 1;
-                }
-
-                state = -1;
+                } 
+                // else {
+                //     ack = ntohs(p->seq); //OTHERWISE DO NOT INCREMENT
+                // }
             }
             
             return;
+
         case SERVER_AWAIT: //(client sends server syn), then server sends back syn ack, then client sends back ack
+            //cer << "SERVER AWAITINGF" << endl;
+
+            if (p->flags & 0b0001) { //check if SYN is on
+                state = SERVER_START;
+                
+                if (0 < ntohs(p->length)) {
+                    output(p->payload, ntohs(p->length));
+                    // ack = ntohs(p->seq) + 1;
+                }
+
+                ack = ntohs(p->seq) + 1;
+                cerr << "ack at SERVER_AWAIT: " << ack << endl;
+            }
+
+            return;
 
         case CLIENT_AWAIT: //client sends server syn, (then server sends back syn ack), then client sends back ack
+            if (p->flags & 0b0011) {
+                state = CLIENT_START;
 
-        default: 
+                if (0 < ntohs(p->length)) {
+                    output(p->payload, ntohs(p->length));
+                    // ack = ntohs(p->seq) + 1;
+                }
+
+                ack = ntohs(p->seq) + 1;
+            }
+
+            return;
+
+        default: //HARD PART!!!!!!!!!!!!!!!!!!!!!!!==========================
             return;
     }
 }
