@@ -256,7 +256,7 @@ void recv_data(packet* p) {
                 }
                 
                 // 3 duplicate ACKS detected, fast retransmit
-                if (dup_acks == DUP_ACKS && !sendDeque.empty()) {
+                if (dup_acks == 3 && !sendDeque.empty()) {
                     packet* base_pkt_ptr = &(sendDeque.front()->pkt);
                     sendto(sockFDrcvd, base_pkt_ptr, sizeof(packet) + ntohs(base_pkt_ptr->length), 0, (sockaddr *) socketAddr, sizeof(sockaddr_in));
                     print_diag(base_pkt_ptr, RTOD);
@@ -283,7 +283,18 @@ void recv_data(packet* p) {
             }
             */
 
-            
+            if (p->flags & 0b0010) {
+                if (ntohs(p->ack) == last_ack) {
+                    dup_acks++; //INC until 3
+                } else {
+                    last_ack = ntohs(p->ack);
+                    dup_acks = 1; //reset back to 1
+                }
+
+                
+            }
+
+
 
             return;
     }
