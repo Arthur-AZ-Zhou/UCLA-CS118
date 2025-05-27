@@ -1,0 +1,33 @@
+CC = gcc
+OPENSSL_PREFIX = $(HOME)/openssl-3.0
+
+CFLAGS = -Wall -Wextra -I$(OPENSSL_PREFIX)/include
+LDFLAGS = -L$(OPENSSL_PREFIX)/lib
+LDLIBS = -Wl,-rpath=$(OPENSSL_PREFIX)/lib $(OPENSSL_PREFIX)/lib/libcrypto.a -ldl -pthread
+
+DEPS = io.o libsecurity.o security.o
+
+%.o: %.c
+	$(CC) $(CFLAGS) $(LDFLAGS) -c $< -o $@
+
+all: server client gen_cert
+
+server: server.o $(DEPS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+
+client: client.o $(DEPS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+
+gen_cert: gen_cert.o $(DEPS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+
+clean:
+	@find . -type f \
+		! -name "*.c" \
+		! -name "*.h" \
+		! -name "*.cpp" \
+		! -name "*.hpp" \
+		! -name "Makefile*" \
+        ! -name "Makefile.local" \
+		! -name "README.md" -delete
+	@find . -type d \( ! -name "." \) -exec rm -rf {} +
