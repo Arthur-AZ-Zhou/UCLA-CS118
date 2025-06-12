@@ -53,6 +53,11 @@ int main(int argc, char** argv) {
     init_sec(CLIENT_CLIENT_HELLO_SEND, argv[1], argc > 3);
     // Connect to server
     // connect()
+    if (connect(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
+        perror("connect");
+        close(sockfd);
+        exit(1);
+    }
 
     // Set the socket nonblocking
     int flags = fcntl(sockfd, F_GETFL);
@@ -61,9 +66,25 @@ int main(int argc, char** argv) {
     setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &(int) {1}, sizeof(int));
     setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, &(int) {1}, sizeof(int));
 
+    uint8_t in_buf[2048], out_buf[2048];
     while(1) {
         // receive data
+        ssize_t received = read(sockfd, in_buf, sizeof(in_buf));
+        if (received > 0) {
+            output_sec(in_buf, (size_t)received);
+        } else if (received < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
+            perror("read");
+            break;
+        }
         // send data
+        ssize_t send_len = input_sec(out_buf, sizeof(out_buf));
+        if (send_len > 0) {
+            ssize_t sent = write(sockfd, out_buf, send_len);
+            if (sent < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
+                perror("write");
+                break;
+            }
+        }
     }
     close(sockfd);
     return 0;

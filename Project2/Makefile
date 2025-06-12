@@ -25,6 +25,5 @@ clean:
 		! -name "*.cpp" \
 		! -name "*.hpp" \
 		! -name "Makefile" \
-		! -name "Makefile.local" \
 		! -name "README.md" -delete
 	@find . -type d \( ! -name "." \) -exec rm -rf {} +
